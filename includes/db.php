@@ -26,14 +26,9 @@ function db(): PDO
     }
     require_once __DIR__ . '/new-collection.php';
     add_new_collection($pdo);
-    // Source-synced catalog: actual product photos and supplier prices.
-    // Network/API errors must never interrupt checkout or browsing.
-    try {
-        require_once __DIR__ . '/source-catalog.php';
-        import_source_catalog($pdo);
-    } catch (Throwable $e) {
-        error_log('Source catalog sync skipped: ' . $e->getMessage());
-    }
+    // Remove the latest incorrect imported and photo-sample listings.
+    // Keep historical rows so previous order references remain intact.
+    $pdo->exec("UPDATE products SET is_active = 0 WHERE slug LIKE 'menbe-%' OR slug LIKE 'ferqli-foto-numune-%' OR slug LIKE 'zerif-foto-kolleksiya-2026-%'");
     // Never display a listing without a genuine image. Preserve order references
     // and product records for the admin rather than deleting transactional data.
     $pdo->exec("UPDATE products SET is_active = 0 WHERE image IS NULL OR TRIM(image) = '' OR image LIKE '%placeholder.svg%'");
