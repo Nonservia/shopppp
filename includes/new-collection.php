@@ -379,10 +379,7 @@ function add_new_collection(PDO $db): void
         if ($alreadyExists) { $boldFashionUpdate->execute([$name, $price, $photo, $slug]); continue; }
         $boldFashionInsert->execute([$categories['gece-geyimleri'] ?? null,$name,$slug,'NÜMUNƏ: Pexels moda fotosu, məhsulun faktiki mövcudluğu təsdiqlənməyib. Qiymət təklifidir. Mənbə: https://www.pexels.com/photo/' . $photoId . '/','',$price,null,'','',0,$photo,'[]',0,1,1,date('Y-m-d H:i:s')]);
     }
-    // Retire the former 150 repeating photo placeholders. Keep their rows
-    // for historical order references instead of deleting them.
-    $db->exec("UPDATE products SET is_active = 0 WHERE slug LIKE 'zerif-foto-kolleksiya-2026-%'");
-
+    // Incorrect 150-image showcase removed; existing historical records remain in database.
     $usedPhotos = [];
     foreach ($products as $i => $p) {
         [$cat, $name, $slug, $price, $old, $sizes, $colors, $photo, $c1, $c2] = $p;
@@ -406,19 +403,6 @@ function add_new_collection(PDO $db): void
             'Yeni kolleksiyadan zərif model. Rahat kəsim və gündəlik istifadə üçün uyğun materiallar.',
             'Yumşaq qarışıq parça', $price, $old, $sizes, $colors, 8 + ($i * 7 % 25),
             $image ?? '', '[]', $i % 3 === 0 ? 1 : 0, 1, $visible, date('Y-m-d H:i:s')]);
-    }
-    // At most one published card per photograph. Hide duplicates instead
-    // of destroying records that existing order lines may still reference.
-    $seen = [];
-    $rows = $db->query("SELECT id, image, slug FROM products WHERE is_active = 1 AND image IS NOT NULL AND TRIM(image) <> '' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $hideDuplicate = $db->prepare('UPDATE products SET is_active = 0 WHERE id = ?');
-    foreach ($rows as $row) {
-        $photoKey = preg_replace('/\\?.*$/', '', trim($row['image']));
-        if (isset($seen[$photoKey])) {
-            $hideDuplicate->execute([$row['id']]);
-        } else {
-            $seen[$photoKey] = true;
-        }
     }
 }
 
