@@ -78,7 +78,7 @@ require __DIR__ . '/includes/header.php';
                     <?php if ($photo): ?>
                         <img src="<?= e(img_url($photo)) ?>" alt="<?= e($c['name']) ?> kateqoriyasından məhsul" loading="lazy">
                     <?php else: ?>
-                        <span class="cat-circle-fallback" aria-hidden="true"><?= e(mb_substr($c['name'], 0, 1, 'UTF-8')) ?></span>
+                        <span class="cat-circle-fallback" aria-hidden="true"><?= '✦' ?></span>
                     <?php endif; ?>
                 </span>
                 <strong><?= e($c['name']) ?></strong>
