@@ -18,7 +18,7 @@ $script = basename($_SERVER['SCRIPT_NAME']);
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=10">
+    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=11">
 </head>
 <body>
 <a class="skip" href="#main">Məzmuna keç</a>
