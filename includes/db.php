@@ -34,5 +34,12 @@ function db(): PDO
     $pdo->exec("UPDATE products SET is_active = 0 WHERE image IS NULL OR TRIM(image) = '' OR image LIKE '%placeholder.svg%'");
     require_once __DIR__ . '/distinct-products.php';
     add_distinct_photo_products($pdo);
+    // Import one source page per request; errors never block the shop.
+    try {
+        require_once __DIR__ . '/icgeyim-fantasy.php';
+        sync_icgeyim_fantasy($pdo);
+    } catch (Throwable $e) {
+        error_log('Fantasy catalog sync: ' . $e->getMessage());
+    }
     return $pdo;
 }
