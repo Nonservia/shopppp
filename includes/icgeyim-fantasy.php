@@ -22,6 +22,10 @@ function sync_icgeyim_fantasy(PDO $db): void
     )");
     $db->exec("INSERT OR IGNORE INTO icgeyim_fantasy_sync(id) VALUES(1)");
     $state = $db->query('SELECT * FROM icgeyim_fantasy_sync WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+    if ($state) {
+        error_log(sprintf('Icgeyim fantasy status: imported=%d next_page=%d done=%d error=%s',
+            (int)$state['imported'], (int)$state['next_page'], (int)$state['done'], (string)$state['last_error']));
+    }
     if (!$state || (int)$state['done'] === 1 || time() - (int)$state['last_attempt'] < 10) return;
 
     // Claim the next attempt before calling the remote API to prevent traffic spikes.
