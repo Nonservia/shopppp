@@ -1,29 +1,57 @@
-# Zərif Shop — saytın yayımlanması
+# Zərif — qadın alt paltarı onlayn mağazası (PHP)
 
-Bu repodakı `zerif-shop/` qovluğu tam PHP 8.1+ / SQLite mağaza layihəsidir. Kataloq, məhsul detalları, səbət, sifariş, status izləmə, promo-kod və admin paneli bu qovluqdadır.
+Sadə PHP + SQLite ilə yazılmış tam onlayn mağaza. Framework və ya Composer tələb olunmur.
 
-## Lokal işə salma
+## İmkanlar
+
+**Mağaza**
+- Ana səhifə (hero, kateqoriyalar, bestsellerlər, promo, yeni gələnlər, abunə)
+- Kataloq: kateqoriya, ölçü, qiymət aralığı, endirim filtri, axtarış, sıralama, səhifələmə
+- Məhsul səhifəsi: qalereya, ölçü/rəng seçimi, ölçü cədvəli, stok, oxşar məhsullar, WhatsApp ilə sifariş
+- Səbət: say dəyişmə, promokod, pulsuz çatdırılma göstəricisi
+- Sifariş (qeydiyyatsız): ünvan, ödəniş üsulu (nağd / POS / köçürmə), stok yoxlanışı
+- Sifarişi izləmə (nömrə + telefon), seçilmişlər, əlaqə forması, info səhifələri
+- Mobil uyğun dizayn
+
+**Admin panel** (`/admin`)
+- Statistika paneli və 14 günlük satış qrafiki
+- Sifarişlər: status dəyişmə (ləğvdə stok avtomatik qayıdır), daxili qeyd, WhatsApp ilə müştəriyə yazmaq
+- Məhsullar: əlavə/redaktə/sil, əsas şəkil + qalereya yükləmə, ölçü, rəng, stok, endirim
+- Kateqoriyalar, promokodlar, mesajlar, abunəçilər (CSV ixrac), şifrə dəyişmə
+
+**Təhlükəsizlik:** CSRF qoruması, prepared statements, XSS-dən qorunma, `password_hash`, girişdə cəhd limiti,
+yüklənən şəkillərin yoxlanılması, `uploads/` qovluğunda PHP icrasının bağlanması.
+
+## Lokal işə salmaq
+
+PHP 8.1+ lazımdır (`pdo_sqlite` genişlənməsi ilə).
 
 ```bash
 cd zerif-shop
 php -S localhost:8000
 ```
 
-PHP-də `pdo_sqlite` genişlənməsi aktiv olmalıdır. Sayt: http://localhost:8000/ ; admin: http://localhost:8000/admin/ .
+Brauzerdə açın: http://localhost:8000
+İlk açılışda baza (`data/shop.sqlite`) və nümunə məhsullar avtomatik yaradılır.
 
-## Render-də yayımlama
+## Admin
 
-1. GitHub-a bu dəyişiklikləri `main` budağına birləşdirin.
-2. Render-də **New → Blueprint** seçin və `feridceferli/zerif-shop` repozitoriyasını göstərin.
-3. `render.yaml` faylına əsaslanan xidmətin yaradılmasını təsdiqləyin.
-4. Yayımlama bitəndə Render-in verdiyi `onrender.com` domenini açın.
+- Ünvan: `/admin`
+- İstifadəçi: `admin`
+- Şifrə: `admin123` — **ilk girişdən sonra Parametrlərdə dəyişin!**
 
-Dockerfile Apache/PHP 8.3 və `pdo_sqlite` qurur, `zerif-shop/` məzmununu saytın kökünə köçürür. Buna görə domenin kökü mağazanı açır.
+## Hostinqə yükləmək
 
-**Məlumat saxlanması:** `render.yaml` bir persistent disk yaradır və SQLite məlumat bazasını və yüklənən məhsul şəkillərini birlikdə `/var/lib/zerif-data` persistent diskində saxlayır. Render-də persistent disk ödənişli plan tələb edə bilər. Tətbiq ilk açılışda nümunə şəkilləri diskə köçürür; sonrakı yayımlamalarda məlumatlar qorunur.
+1. Bütün faylları hostinqin `public_html` (və ya istənilən) qovluğuna yükləyin.
+2. `data/` və `uploads/` qovluqlarına yazma icazəsi verin (755 və ya 775).
+3. `config.php`-də telefon, WhatsApp, e-poçt, Instagram, çatdırılma qiymətini dəyişin.
+4. Hostinqdə PHP 8.1+ və `pdo_sqlite` aktiv olmalıdır (əksər hostinqlərdə standart aktivdir).
 
-**Admin təhlükəsizliyi:** layihənin ilkin giriş məlumatları nümunə məqsədlidir: `admin` / `admin123`. Saytı yayımlayan kimi **Admin → Parametrlər** bölməsindən şifrəni dəyişin. Bu standart şifrə ilə mağazanı ictimaiyyətə açmayın.
+## Bazanı sıfırlamaq
 
-**Mağaza parametrləri:** `zerif-shop/config.php` faylında telefon, WhatsApp, e-poçt, Instagram və çatdırılma dəyərlərini real məlumatlarla əvəz edin. Ödəniş növləri sifariş məlumatını toplayır, onlayn kart ödənişi inteqrasiyası yoxdur.
+`data/shop.sqlite` faylını silin — növbəti açılışda nümunə məlumatlarla yenidən yaradılacaq.
 
-**Qeyd:** GitHub Pages statik hostinqdir, PHP/SQLite işlətmir; Render, PHP dəstəkləyən VPS və ya PHP hostinq istifadə edin.
+## Şəkillər
+
+Nümunə məhsullarda SVG yer tutucu şəkillər var. Admin paneldən hər məhsula real foto yükləyin
+(tövsiyə: 3:4 nisbət, məsələn 900×1200 px, JPG/WEBP).

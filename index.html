@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IvaSMS Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IvaSMS Panel</h1>
+            <p id="user-greeting">Xoş gəlmisiniz!</p>
+        </header>
+        <section class="card">
+            <h2>Balans və Xidmətlər</h2>
+            <div class="balance-display">
+                <span id="balance-amount">0.00 AZN</span>
+            </div>
+            <button id="topup-btn" class="primary-btn">Balansı Artır</button>
+        </section>
+        <section class="card">
+            <h2>Aktiv Nömrələr</h2>
+            <div id="services-list">
+                <p>Aktiv nömrə yoxdur.</p>
+            </div>
+        </section>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
