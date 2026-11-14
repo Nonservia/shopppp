@@ -4,7 +4,7 @@
  */
 function import_source_catalog(PDO $db): void {
     $db->exec("CREATE TABLE IF NOT EXISTS catalog_sync (source TEXT PRIMARY KEY, last_attempt INTEGER NOT NULL)");
-    $db->exec("UPDATE products SET is_active=0 WHERE slug LIKE 'zerif-foto-kolleksiya-2026-%' OR slug LIKE 'ferqli-foto-numune-%'");
+    $db->exec("UPDATE products SET is_active=0 WHERE slug LIKE 'zerif-foto-kolleksiya-2026-%' OR slug LIKE 'ferqli-foto-numune-%' OR slug LIKE 'foto-numune-%'");
     $sources = [
         'icgeyim.az' => 'https://icgeyim.az/wp-json/wc/store/v1/products?per_page=100&page=',
         'vixenbaku.az' => 'https://vixenbaku.az/wp-json/wc/store/v1/products?per_page=100&page='
