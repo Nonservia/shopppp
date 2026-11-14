@@ -82,6 +82,32 @@ function sync_icgeyim_other_categories(PDO $db): void
     }
 
     $targetIds=$db->query('SELECT slug,id FROM categories')->fetchAll(PDO::FETCH_KEY_PAIR);
+    // Product-specific classification takes precedence over broad supplier
+    // categories: bra sets are sets, sports outfits are homewear, and bodysuits
+    // are bodies. Never relabel an entire supplier category blindly.
+    $classifyProduct = static function (string $name, string $sourceTarget): string {
+        $n = strtolower($name);
+        if (preg_match('/bodi|body|bodysuit|kombinezon/iu', $n)) return 'bodi';
+        if (preg_match('/pijama|pyjama|ev.geyim|sport.+(dəst|dest|takım|takim)|idman geyim/iu', $n)) return 'ev-geyimi';
+        if (in_array($sourceTarget, ['bustqalterler','trusikler'], true)
+            && preg_match('/dəst|dest|takım|takim|komplekt|seti|seti\\b|set\\b/iu', $n))
+            return 'destler';
+        return $sourceTarget;
+    };
+
+    // Correct categories of already imported listings without touching admin
+    // products, fantasy products or historical order data.
+    $reclassify = $db->prepare('UPDATE products SET category_id=? WHERE id=?');
+    $existingSynced = $db->query("SELECT id, name, category_id FROM products WHERE slug LIKE 'icgeyim-model-%'")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($existingSynced as $entry) {
+        $current = array_search((int)$entry['category_id'], $targetIds, false);
+        if ($current === false) continue;
+        $correct = $classifyProduct((string)$entry['name'], (string)$current);
+        if (isset($targetIds[$correct]) && (int)$targetIds[$correct] !== (int)$entry['category_id']) {
+            $reclassify->execute([(int)$targetIds[$correct], (int)$entry['id']]);
+        }
+    }
+
     $sourceState=$db->query('SELECT category_id FROM icgeyim_fantasy_sync WHERE id=1')->fetchColumn();
     $fantasyId=(int)($sourceState?:0);
     $claim=$db->prepare('SELECT id FROM products WHERE slug=? LIMIT 1');
@@ -148,7 +174,9 @@ function sync_icgeyim_other_categories(PDO $db): void
                 if (!str_starts_with($permalink,'https://icgeyim.az/')) $permalink='https://icgeyim.az/';
                 $stock=!empty($p['is_in_stock'])?10:0;
                 $description='Orijinal məhsul və foto: '.$permalink.'. Qiymət mənbədə göstərilən AZN məbləğidir.';
-                $add->execute([$targetIds[$target],$name,$slug,$description,'',$price,$regular,'','',$stock,$photo,'[]',0,1,1,date('Y-m-d H:i:s')]);
+                $productTarget = $classifyProduct($name, $target);
+                if (!isset($targetIds[$productTarget])) continue;
+                $add->execute([$targetIds[$productTarget],$name,$slug,$description,'',$price,$regular,'','',$stock,$photo,'[]',0,1,1,date('Y-m-d H:i:s')]);
                 $used[$key]=true;
                 $n++;
             }
