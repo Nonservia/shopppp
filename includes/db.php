@@ -5,7 +5,15 @@ function db(): PDO
 {
     static $pdo = null;
     if ($pdo) {
-        return $pdo;
+        // Enforce the shop's 30 AZN minimum across every product, including
+    // inactive listings, existing inventory and future supplier imports.
+    // If a former comparison price is no longer above the new selling price,
+    // remove it rather than advertising a misleading discount.
+    $pdo->exec("UPDATE products SET price = 30,
+        old_price = CASE WHEN old_price IS NOT NULL AND old_price <= 30
+            THEN NULL ELSE old_price END
+        WHERE price < 30");
+    return $pdo;
     }
     $dir = dirname(DB_PATH);
     if (!is_dir($dir)) {
