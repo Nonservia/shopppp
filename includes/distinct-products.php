@@ -3,7 +3,7 @@
  * Verified model photographs from public product pages.
  * Do not reuse a single image for multiple SKUs. Source-market prices
  * are used where verified in AZN; other prices are clearly shop proposals.
- * All new products have stock=0 until the administrator confirms supply.
+ * Shop inventory displayed for these manually selected products is 10 each.
  */
 function add_distinct_photo_products(PDO $db): void
 {
@@ -22,7 +22,7 @@ function add_distinct_photo_products(PDO $db): void
     $categories = $db->query('SELECT slug, id FROM categories')->fetchAll(PDO::FETCH_KEY_PAIR);
     $find = $db->prepare('SELECT id FROM products WHERE slug=?');
     $insert = $db->prepare('INSERT INTO products (category_id,name,slug,description,material,price,old_price,sizes,colors,stock,image,gallery,is_featured,is_new,is_active,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $update = $db->prepare('UPDATE products SET is_active=1 WHERE id=?');
+    $update = $db->prepare('UPDATE products SET is_active=1, stock=10 WHERE id=?');
     foreach ($items as $i => $v) {
         [$category,$name,$price,$old,$image,$source,$priceType] = $v;
         if (!isset($categories[$category])) continue;
@@ -30,7 +30,7 @@ function add_distinct_photo_products(PDO $db): void
         $find->execute([$slug]);
         if ($id = $find->fetchColumn()) { $update->execute([$id]); continue; }
         $desc = 'Model və şəkil mənbəsi: ' . $source . '. ' . $priceType . '. Məhsul stok və ölçü təsdiqindən sonra satışa açılacaq.';
-        $insert->execute([$categories[$category],$name,$slug,$desc,'',$price,$old,'','',0,$image,'[]',0,1,1,date('Y-m-d H:i:s')]);
+        $insert->execute([$categories[$category],$name,$slug,$desc,'',$price,$old,'','',10,$image,'[]',0,1,1,date('Y-m-d H:i:s')]);
     }
     // Deterministic photo de-duplication: new genuine model photos have priority.
     // Never delete past products because order records can still reference them.
