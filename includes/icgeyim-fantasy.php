@@ -71,6 +71,10 @@ function sync_icgeyim_fantasy(PDO $db): void
         $db->prepare('UPDATE icgeyim_fantasy_sync SET category_id=? WHERE id=1')->execute([$categoryId]);
     }
 
+    // Finish the full category in a single sync attempt when the API responds.
+    // Each page has a strict network timeout; cursor saves completed progress.
+    if (function_exists('set_time_limit')) @set_time_limit(90);
+    for ($batch = 0; $batch < 8; $batch++) {
     $page = max(1, (int)$state['next_page']);
     $url = 'https://icgeyim.az/wp-json/wc/store/v1/products?category=' . $categoryId . '&per_page=100&page=' . $page;
     $items = $request($url);
@@ -133,4 +137,7 @@ function sync_icgeyim_fantasy(PDO $db): void
     $done = count($items) < 100 ? 1 : 0;
     $db->prepare('UPDATE icgeyim_fantasy_sync SET next_page=?, imported=imported+?, done=?, last_error=? WHERE id=1')
        ->execute([$page + 1,$added,$done,'']);
+    $state['next_page'] = $page + 1;
+    if ($done) break;
+    }
 }
