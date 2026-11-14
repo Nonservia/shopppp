@@ -38,6 +38,8 @@ function db(): PDO
     try {
         require_once __DIR__ . '/icgeyim-fantasy.php';
         sync_icgeyim_fantasy($pdo);
+        require_once __DIR__ . '/icgeyim-other.php';
+        sync_icgeyim_other_categories($pdo);
     } catch (Throwable $e) {
         error_log('Fantasy catalog sync: ' . $e->getMessage());
     }
