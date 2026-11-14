@@ -32,5 +32,7 @@ function db(): PDO
     // Never display a listing without a genuine image. Preserve order references
     // and product records for the admin rather than deleting transactional data.
     $pdo->exec("UPDATE products SET is_active = 0 WHERE image IS NULL OR TRIM(image) = '' OR image LIKE '%placeholder.svg%'");
+    require_once __DIR__ . '/distinct-products.php';
+    add_distinct_photo_products($pdo);
     return $pdo;
 }
