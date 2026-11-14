@@ -383,27 +383,6 @@ function add_new_collection(PDO $db): void
     // for historical order references instead of deleting them.
     $db->exec("UPDATE products SET is_active = 0 WHERE slug LIKE 'zerif-foto-kolleksiya-2026-%'");
 
-    // Additional distinct Pexels photo examples. Each URL is used once only.
-    // These are editorial samples, not verified goods in inventory.
-    $distinctSamples = [
-        ['destler', 'Açıq çəhrayı iç geyim dəsti — foto nümunəsi', 58, 8732111],
-        ['destler', 'Klassik lifçik və trusik dəsti — foto nümunəsi', 62, 5253436],
-        ['destler', 'Dantel iç geyim kombinasiyası — foto nümunəsi', 69, 34225847],
-    ];
-    foreach ($distinctSamples as $sample) {
-        [$cat, $name, $price, $photoId] = $sample;
-        if (!isset($categories[$cat])) continue;
-        $slug = 'ferqli-foto-numune-' . $photoId;
-        $photo = 'https://images.pexels.com/photos/' . $photoId . '/pexels-photo-' . $photoId . '.jpeg?auto=compress&cs=tinysrgb&w=800';
-        $description = 'Real Pexels fotosu əsasında nümunə. Foto ayrıca anbarda olan məhsulun təsdiqi deyil; qiymət mağaza nümunəsidir. Mənbə: https://www.pexels.com/photo/' . $photoId . '/';
-        $check->execute([$slug]);
-        if ($check->fetchColumn()) {
-            $db->prepare('UPDATE products SET name = ?, description = ?, price = ?, image = ?, stock = 0, is_active = 1 WHERE slug = ?')
-                ->execute([$name, $description, $price, $photo, $slug]);
-        } else {
-            $insert->execute([$categories[$cat], $name, $slug, $description, '', $price, null, '', '', 0, $photo, '[]', 0, 1, 1, date('Y-m-d H:i:s')]);
-        }
-    }
     $usedPhotos = [];
     foreach ($products as $i => $p) {
         [$cat, $name, $slug, $price, $old, $sizes, $colors, $photo, $c1, $c2] = $p;
