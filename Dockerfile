@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-dev 
     && a2enmod rewrite headers \
     && mkdir -p /var/www/html/data /var/www/html/uploads /var/lib/zerif-data/uploads
 
-COPY zerif-shop/ /var/www/html/
+COPY . /var/www/html/
 RUN cp -a /var/www/html/uploads/. /var/lib/zerif-data/uploads/
 
 RUN chown -R www-data:www-data /var/www/html/data /var/www/html/uploads \
