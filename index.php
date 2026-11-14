@@ -6,7 +6,22 @@ $deals = $q('SELECT * FROM products WHERE is_active = 1 AND old_price > price OR
 $best = $q('SELECT * FROM products WHERE is_active = 1 AND is_featured = 1 ORDER BY sold_count DESC, id DESC LIMIT 10');
 $newest = $q('SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC, id DESC LIMIT 10');
 $catCounts = db()->query('SELECT category_id, COUNT(*) c FROM products WHERE is_active = 1 GROUP BY category_id')->fetchAll(PDO::FETCH_KEY_PAIR);
-$bannerImg = db()->query("SELECT image FROM products WHERE is_active = 1 AND image LIKE 'uploads/demo/%' ORDER BY is_featured DESC, price DESC LIMIT 3")->fetchAll(PDO::FETCH_COLUMN);
+// Use an active product's actual photograph for every category and promo.
+// Avoid the old SVG category placeholders and missing uploads/demo files.
+$categoryPhotos = [];
+$photoRows = db()->query("SELECT category_id, image FROM products
+    WHERE is_active = 1 AND image LIKE 'https://%' AND image NOT LIKE '%.svg%'
+    ORDER BY is_new DESC, id DESC")->fetchAll();
+foreach ($photoRows as $row) {
+    $catId = (int)$row['category_id'];
+    if (!isset($categoryPhotos[$catId])) $categoryPhotos[$catId] = $row['image'];
+}
+$bannerPhotos = [];
+foreach (categories() as $c) {
+    if (!empty($categoryPhotos[(int)$c['id']])) {
+        $bannerPhotos[$c['slug']] = $categoryPhotos[(int)$c['id']];
+    }
+}
 
 function product_row(string $title, array $items, string $more, string $icon = ''): void
 {
@@ -24,32 +39,48 @@ $pageTitle = '';
 require __DIR__ . '/includes/header.php';
 ?>
 <div class="container home">
-    <section class="banners">
+    <section class="banners" aria-label="Mağaza təklifləri">
         <a class="banner banner-main" href="<?= url('shop.php?sale=1') ?>">
             <div class="banner-text">
                 <span class="banner-tag">Mövsüm endirimi</span>
-                <h1>Alt paltarlarında <br><strong>40%-dək endirim</strong></h1>
-                <p>Dəstlər, büstqalterlər və gecə geyimlərində xüsusi qiymətlər</p>
-                <span class="btn btn-white">İndi al</span>
+                <h1>Alt paltarlarında <strong>40%-dək endirim</strong></h1>
+                <span class="btn btn-white banner-cta">İndi al <span aria-hidden="true">›</span></span>
             </div>
-            <?php if (!empty($bannerImg[0])): ?><img src="<?= e(img_url($bannerImg[0])) ?>" alt="" class="banner-img"><?php endif; ?>
+            <?php if (!empty($bannerPhotos['destler'])): ?>
+                <img src="<?= e(img_url($bannerPhotos['destler'])) ?>" alt="Alt geyim dəsti" class="banner-img" fetchpriority="high">
+            <?php endif; ?>
         </a>
         <div class="banner-side">
             <a class="banner banner-small banner-dark" href="<?= url('shop.php?cat=gece-geyimleri') ?>">
-                <div class="banner-text"><span class="banner-tag">Yeni</span><h3>Gecə geyimləri</h3><span class="link-arrow">Kəşf et ›</span></div>
-                <?php if (!empty($bannerImg[1])): ?><img src="<?= e(img_url($bannerImg[1])) ?>" alt="" class="banner-img"><?php endif; ?>
+                <div class="banner-text">
+                    <h3>Gecə geyimləri</h3>
+                    <span class="link-arrow">Kəşf et ›</span>
+                </div>
+                <?php if (!empty($bannerPhotos['gece-geyimleri'])): ?>
+                    <img src="<?= e(img_url($bannerPhotos['gece-geyimleri'])) ?>" alt="Gecə geyimi" class="banner-img" loading="lazy">
+                <?php endif; ?>
             </a>
             <a class="banner banner-small banner-light" href="<?= url('cart.php') ?>">
-                <div class="banner-text"><span class="banner-tag">Promokod</span><h3>İlk sifarişə 10%</h3><span class="code">XOS10</span></div>
-                <?php if (!empty($bannerImg[2])): ?><img src="<?= e(img_url($bannerImg[2])) ?>" alt="" class="banner-img"><?php endif; ?>
+                <div class="banner-text">
+                    <h3>İlk sifarişə <strong>10%</strong></h3>
+                    <span class="code">XOS10</span>
+                </div>
+                <span class="banner-gift" aria-hidden="true">🎁</span>
             </a>
         </div>
     </section>
 
     <section class="cat-circles" aria-label="Kateqoriyalar">
         <?php foreach (categories() as $c): ?>
+            <?php $photo = $categoryPhotos[(int)$c['id']] ?? ''; ?>
             <a href="<?= url('shop.php?cat=' . urlencode($c['slug'])) ?>" class="cat-circle">
-                <span class="cat-circle-img"><img src="<?= e(img_url($c['image'])) ?>" alt="" loading="lazy"></span>
+                <span class="cat-circle-img">
+                    <?php if ($photo): ?>
+                        <img src="<?= e(img_url($photo)) ?>" alt="<?= e($c['name']) ?> kateqoriyasından məhsul" loading="lazy">
+                    <?php else: ?>
+                        <span class="cat-circle-fallback" aria-hidden="true"><?= e(mb_substr($c['name'], 0, 1, 'UTF-8')) ?></span>
+                    <?php endif; ?>
+                </span>
                 <strong><?= e($c['name']) ?></strong>
                 <small><?= (int)($catCounts[$c['id']] ?? 0) ?> məhsul</small>
             </a>
