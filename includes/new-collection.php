@@ -379,48 +379,29 @@ function add_new_collection(PDO $db): void
         if ($alreadyExists) { $boldFashionUpdate->execute([$name, $price, $photo, $slug]); continue; }
         $boldFashionInsert->execute([$categories['gece-geyimleri'] ?? null,$name,$slug,'NÜMUNƏ: Pexels moda fotosu, məhsulun faktiki mövcudluğu təsdiqlənməyib. Qiymət təklifidir. Mənbə: https://www.pexels.com/photo/' . $photoId . '/','',$price,null,'','',0,$photo,'[]',0,1,1,date('Y-m-d H:i:s')]);
     }
-    // 150 new catalog showcase entries. Photographs are real Pexels editorial photos,
-    // not guaranteed to depict a stocked SKU. Prices are shop-set 30-100 AZN.
-    $showcasePhotos = [
-        'gece-geyimleri' => [20364775, 20364781, 7470467],
-        'bustqalterler' => [10457194, 10457175],
-        'trusikler' => [26968036, 10457175],
-        'destler' => [26968036, 10457194, 34225852],
-        'bodi' => [26100332, 15791792],
-        'ev-geyimi' => [20364775, 20364781, 7470467],
+    // Retire the former 150 repeating photo placeholders. Keep their rows
+    // for historical order references instead of deleting them.
+    $db->exec("UPDATE products SET is_active = 0 WHERE slug LIKE 'zerif-foto-kolleksiya-2026-%'");
+
+    // Additional distinct Pexels photo examples. Each URL is used once only.
+    // These are editorial samples, not verified goods in inventory.
+    $distinctSamples = [
+        ['destler', 'Açıq çəhrayı iç geyim dəsti — foto nümunəsi', 58, 8732111],
+        ['destler', 'Klassik lifçik və trusik dəsti — foto nümunəsi', 62, 5253436],
+        ['destler', 'Dantel iç geyim kombinasiyası — foto nümunəsi', 69, 34225847],
     ];
-    $showcaseLabels = [
-        'gece-geyimleri' => 'Gecə geyimi',
-        'bustqalterler' => 'Lifçik',
-        'trusikler' => 'Alt geyimi',
-        'destler' => 'İç geyim dəsti',
-        'bodi' => 'Bodi',
-        'ev-geyimi' => 'Ev geyimi',
-    ];
-    $showcaseDistribution = [
-        'gece-geyimleri' => 35, 'bustqalterler' => 30,
-        'trusikler' => 25, 'destler' => 25, 'bodi' => 15, 'ev-geyimi' => 20,
-    ];
-    $showcaseInsert = $db->prepare('INSERT INTO products (category_id,name,slug,description,material,price,old_price,sizes,colors,stock,image,gallery,is_featured,is_new,is_active,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-    $showcaseUpdate = $db->prepare('UPDATE products SET name=?, description=?, price=?, old_price=NULL, image=?, stock=0, is_active=1 WHERE slug=?');
-    $showcaseN = 0;
-    foreach ($showcaseDistribution as $category => $count) {
-        if (!isset($categories[$category])) continue;
-        for ($j = 1; $j <= $count; $j++) {
-            $showcaseN++;
-            $slug = 'zerif-foto-kolleksiya-2026-' . str_pad((string)$showcaseN, 3, '0', STR_PAD_LEFT);
-            $name = $showcaseLabels[$category] . ' — foto kolleksiya ' . str_pad((string)$j, 2, '0', STR_PAD_LEFT);
-            $photos = $showcasePhotos[$category];
-            $photoId = $photos[($j - 1) % count($photos)];
-            $image = 'https://images.pexels.com/photos/' . $photoId . '/pexels-photo-' . $photoId . '.jpeg?auto=compress&cs=tinysrgb&w=800';
-            $price = 30 + (($showcaseN * 13 + $j * 7) % 71);
-            $description = 'Foto kataloq nümunəsi: real Pexels moda fotosu, eyni foto bir neçə nümunədə istifadə edilə bilər. Şəkildəki əşyanın ayrıca anbar mövcudluğu və ölçüləri təsdiqlənməyib. Qiymət Zərif Shop tərəfindən təyin edilmiş nümunə qiymətdir. Foto mənbə: https://www.pexels.com/photo/' . $photoId . '/';
-            $check->execute([$slug]);
-            if ($check->fetchColumn()) {
-                $showcaseUpdate->execute([$name, $description, $price, $image, $slug]);
-            } else {
-                $showcaseInsert->execute([$categories[$category], $name, $slug, $description, '', $price, null, '', '', 0, $image, '[]', 0, 1, 1, date('Y-m-d H:i:s')]);
-            }
+    foreach ($distinctSamples as $sample) {
+        [$cat, $name, $price, $photoId] = $sample;
+        if (!isset($categories[$cat])) continue;
+        $slug = 'ferqli-foto-numune-' . $photoId;
+        $photo = 'https://images.pexels.com/photos/' . $photoId . '/pexels-photo-' . $photoId . '.jpeg?auto=compress&cs=tinysrgb&w=800';
+        $description = 'Real Pexels fotosu əsasında nümunə. Foto ayrıca anbarda olan məhsulun təsdiqi deyil; qiymət mağaza nümunəsidir. Mənbə: https://www.pexels.com/photo/' . $photoId . '/';
+        $check->execute([$slug]);
+        if ($check->fetchColumn()) {
+            $db->prepare('UPDATE products SET name = ?, description = ?, price = ?, image = ?, stock = 0, is_active = 1 WHERE slug = ?')
+                ->execute([$name, $description, $price, $photo, $slug]);
+        } else {
+            $insert->execute([$categories[$cat], $name, $slug, $description, '', $price, null, '', '', 0, $photo, '[]', 0, 1, 1, date('Y-m-d H:i:s')]);
         }
     }
     $usedPhotos = [];
@@ -446,6 +427,19 @@ function add_new_collection(PDO $db): void
             'Yeni kolleksiyadan zərif model. Rahat kəsim və gündəlik istifadə üçün uyğun materiallar.',
             'Yumşaq qarışıq parça', $price, $old, $sizes, $colors, 8 + ($i * 7 % 25),
             $image ?? '', '[]', $i % 3 === 0 ? 1 : 0, 1, $visible, date('Y-m-d H:i:s')]);
+    }
+    // At most one published card per photograph. Hide duplicates instead
+    // of destroying records that existing order lines may still reference.
+    $seen = [];
+    $rows = $db->query("SELECT id, image, slug FROM products WHERE is_active = 1 AND image IS NOT NULL AND TRIM(image) <> '' ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $hideDuplicate = $db->prepare('UPDATE products SET is_active = 0 WHERE id = ?');
+    foreach ($rows as $row) {
+        $photoKey = preg_replace('/\\?.*$/', '', trim($row['image']));
+        if (isset($seen[$photoKey])) {
+            $hideDuplicate->execute([$row['id']]);
+        } else {
+            $seen[$photoKey] = true;
+        }
     }
 }
 
