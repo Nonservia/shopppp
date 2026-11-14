@@ -119,10 +119,6 @@ require __DIR__ . '/includes/header.php';
             </ul>
 
             <div class="accordion">
-                <details open>
-                    <summary>Təsvir</summary>
-                    <div><?= nl2br(e($p['description'])) ?></div>
-                </details>
                 <?php if ($p['material']): ?>
                 <details>
                     <summary>Material və qulluq</summary>
