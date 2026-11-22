@@ -1,19 +1,43 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
+/**
+ * Keep every fantasy-category listing at 40 AZN or more with a distinct price.
+ * Never lower an existing price. Stable ordering makes repeat requests idempotent.
+ * The same rule covers existing listings and newly imported supplier products.
+ */
+function ensure_fantasy_prices(PDO $pdo): void
+{
+    $rows = $pdo->query("SELECT p.id, p.price FROM products p
+        JOIN categories c ON c.id = p.category_id
+        WHERE c.slug = 'fantaziya-geyimleri'
+        ORDER BY p.price ASC, p.id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $used = [];
+    $update = $pdo->prepare('UPDATE products SET price = ?, old_price = CASE
+        WHEN old_price IS NOT NULL AND old_price <= ? THEN NULL
+        ELSE old_price END WHERE id = ?');
+    foreach ($rows as $row) {
+        $price = max(40, (int)ceil((float)$row['price']));
+        while (isset($used[$price])) $price++;
+        $used[$price] = true;
+        if ((float)$row['price'] !== (float)$price) {
+            $update->execute([$price, $price, (int)$row['id']]);
+        } else {
+            $pdo->prepare('UPDATE products SET old_price = NULL WHERE id = ? AND old_price <= price')
+                ->execute([(int)$row['id']]);
+        }
+    }
+}
+
 function db(): PDO
 {
     static $pdo = null;
     if ($pdo) {
-        // Enforce the shop's 30 AZN minimum across every product, including
-    // inactive listings, existing inventory and future supplier imports.
-    // If a former comparison price is no longer above the new selling price,
-    // remove it rather than advertising a misleading discount.
-    $pdo->exec("UPDATE products SET price = 30,
-        old_price = CASE WHEN old_price IS NOT NULL AND old_price <= 30
-            THEN NULL ELSE old_price END
-        WHERE price < 30");
-    return $pdo;
+        $pdo->exec("UPDATE products SET price = 30,
+            old_price = CASE WHEN old_price IS NOT NULL AND old_price <= 30
+                THEN NULL ELSE old_price END
+            WHERE price < 30");
+        return $pdo;
     }
     $dir = dirname(DB_PATH);
     if (!is_dir($dir)) {
@@ -34,15 +58,10 @@ function db(): PDO
     }
     require_once __DIR__ . '/new-collection.php';
     add_new_collection($pdo);
-    // Remove the latest incorrect imported and photo-sample listings.
-    // Keep historical rows so previous order references remain intact.
     $pdo->exec("UPDATE products SET is_active = 0 WHERE slug LIKE 'menbe-%' OR slug LIKE 'ferqli-foto-numune-%' OR slug LIKE 'zerif-foto-kolleksiya-2026-%' OR slug LIKE 'foto-numune-%' OR slug LIKE 'birmarket-ref-2026-%'");
-    // Never display a listing without a genuine image. Preserve order references
-    // and product records for the admin rather than deleting transactional data.
     $pdo->exec("UPDATE products SET is_active = 0 WHERE image IS NULL OR TRIM(image) = '' OR image LIKE '%placeholder.svg%'");
     require_once __DIR__ . '/distinct-products.php';
     add_distinct_photo_products($pdo);
-    // Import one source page per request; errors never block the shop.
     try {
         require_once __DIR__ . '/icgeyim-fantasy.php';
         sync_icgeyim_fantasy($pdo);
@@ -51,5 +70,6 @@ function db(): PDO
     } catch (Throwable $e) {
         error_log('Fantasy catalog sync: ' . $e->getMessage());
     }
+    ensure_fantasy_prices($pdo);
     return $pdo;
 }
