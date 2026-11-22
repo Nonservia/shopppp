@@ -160,9 +160,19 @@ require __DIR__ . '/includes/header.php';
             </div>
             <?php if ($pages > 1): ?>
                 <nav class="pagination">
-                    <?php for ($i = 1; $i <= $pages; $i++): ?>
-                        <a href="<?= e(qs(['page' => $i])) ?>" class="<?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
-                    <?php endfor; ?>
+                    <?php
+                    // Compact navigation: never render every page number at once.
+                    $visible = array_values(array_unique(array_filter([
+                        1, $page - 1, $page, $page + 1, $pages
+                    ], fn($n) => $n >= 1 && $n <= $pages)));
+                    sort($visible);
+                    $previous = 0;
+                    foreach ($visible as $i):
+                        if ($previous && $i > $previous + 1): ?>
+                            <span class="pagination-gap" aria-hidden="true">…</span>
+                        <?php endif; ?>
+                        <a href="<?= e(qs(['page' => $i])) ?>" class="<?= $i === $page ? 'active' : '' ?>" <?= $i === $page ? 'aria-current="page"' : '' ?>><?= $i ?></a>
+                    <?php $previous = $i; endforeach; ?>
                 </nav>
             <?php endif; ?>
         <?php else: ?>
