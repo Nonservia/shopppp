@@ -32,7 +32,7 @@ function e($s): string
 
 function money($v): string
 {
-    return number_format((float)$v, 2, '.', ' ') . ' ' . CURRENCY;
+    return number_format((float)$v, 0, '.', ' ') . ' ' . CURRENCY;
 }
 
 function redirect(string $to): void
