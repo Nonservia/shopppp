@@ -2,30 +2,23 @@
 require_once __DIR__ . '/../config.php';
 
 /**
- * Keep every fantasy-category listing at 40 AZN or more with a distinct price.
- * Never lower an existing price. Stable ordering makes repeat requests idempotent.
- * The same rule covers existing listings and newly imported supplier products.
+ * Fantasy products cost between 40.00 and 70.00 AZN.
+ * Stable ID ordering and cent-level prices give up to 3001 distinct prices.
+ * Re-run after imports so the rule also covers newly added listings.
  */
 function ensure_fantasy_prices(PDO $pdo): void
 {
     $rows = $pdo->query("SELECT p.id, p.price FROM products p
         JOIN categories c ON c.id = p.category_id
         WHERE c.slug = 'fantaziya-geyimleri'
-        ORDER BY p.price ASC, p.id ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $used = [];
+        ORDER BY p.id ASC")->fetchAll(PDO::FETCH_ASSOC);
     $update = $pdo->prepare('UPDATE products SET price = ?, old_price = CASE
         WHEN old_price IS NOT NULL AND old_price <= ? THEN NULL
         ELSE old_price END WHERE id = ?');
-    foreach ($rows as $row) {
-        $price = max(40, (int)ceil((float)$row['price']));
-        while (isset($used[$price])) $price++;
-        $used[$price] = true;
-        if ((float)$row['price'] !== (float)$price) {
-            $update->execute([$price, $price, (int)$row['id']]);
-        } else {
-            $pdo->prepare('UPDATE products SET old_price = NULL WHERE id = ? AND old_price <= price')
-                ->execute([(int)$row['id']]);
-        }
+    foreach ($rows as $index => $row) {
+        // 40.00..70.00 AZN; the 97-cent step is coprime with 3001.
+        $price = (4000 + (($index * 97) % 3001)) / 100;
+        $update->execute([$price, $price, (int)$row['id']]);
     }
 }
 
