@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config.php';
 
 /**
  * Fantasy products cost between 40.00 and 70.00 AZN.
- * Stable ID ordering and cent-level prices give up to 3001 distinct prices.
+ * Whole-manat prices are distributed over the 31 available values.
  * Re-run after imports so the rule also covers newly added listings.
  */
 function ensure_fantasy_prices(PDO $pdo): void
@@ -16,8 +16,8 @@ function ensure_fantasy_prices(PDO $pdo): void
         WHEN old_price IS NOT NULL AND old_price <= ? THEN NULL
         ELSE old_price END WHERE id = ?');
     foreach ($rows as $index => $row) {
-        // 40.00..70.00 AZN; the 97-cent step is coprime with 3001.
-        $price = (4000 + (($index * 97) % 3001)) / 100;
+        // 40..70 AZN, no fractional amounts. Values repeat after 31 products.
+        $price = 40 + (($index * 7) % 31);
         $update->execute([$price, $price, (int)$row['id']]);
     }
 }
