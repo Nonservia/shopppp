@@ -2,9 +2,8 @@
 require_once __DIR__ . '/../config.php';
 
 /**
- * Fantasy products cost between 40.00 and 70.00 AZN.
- * Whole-manat prices are distributed over the 31 available values.
- * Re-run after imports so the rule also covers newly added listings.
+ * Fantasy products cost between 40 and 70 AZN.
+ * Preserve the separate 15–40 AZN perfume price range.
  */
 function ensure_fantasy_prices(PDO $pdo): void
 {
@@ -16,7 +15,6 @@ function ensure_fantasy_prices(PDO $pdo): void
         WHEN old_price IS NOT NULL AND old_price <= ? THEN NULL
         ELSE old_price END WHERE id = ?');
     foreach ($rows as $index => $row) {
-        // 40..70 AZN, no fractional amounts. Values repeat after 31 products.
         $price = 40 + (($index * 7) % 31);
         $update->execute([$price, $price, (int)$row['id']]);
     }
@@ -25,17 +23,10 @@ function ensure_fantasy_prices(PDO $pdo): void
 function db(): PDO
 {
     static $pdo = null;
-    if ($pdo) {
-        $pdo->exec("UPDATE products SET price = 30,
-            old_price = CASE WHEN old_price IS NOT NULL AND old_price <= 30
-                THEN NULL ELSE old_price END
-            WHERE price < 30");
-        return $pdo;
-    }
+    if ($pdo) return $pdo;
+
     $dir = dirname(DB_PATH);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0775, true);
-    }
+    if (!is_dir($dir)) mkdir($dir, 0775, true);
     $fresh = !file_exists(DB_PATH) || filesize(DB_PATH) === 0;
 
     $pdo = new PDO('sqlite:' . DB_PATH);
@@ -63,6 +54,15 @@ function db(): PDO
     } catch (Throwable $e) {
         error_log('Fantasy catalog sync: ' . $e->getMessage());
     }
+    // This catalog is idempotent; existing admin changes and orders are retained.
+    require_once __DIR__ . '/perfume-catalog.php';
+    ensure_perfume_catalog($pdo);
+    // Keep the existing 30 AZN minimum only for other categories.
+    $pdo->exec("UPDATE products SET price = 30,
+        old_price = CASE WHEN old_price IS NOT NULL AND old_price <= 30
+            THEN NULL ELSE old_price END
+        WHERE price < 30 AND (category_id IS NULL OR category_id NOT IN
+            (SELECT id FROM categories WHERE slug = 'etirler'))");
     ensure_fantasy_prices($pdo);
     return $pdo;
 }

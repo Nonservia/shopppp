@@ -72,7 +72,7 @@ require __DIR__ . '/includes/header.php';
 
     <section class="cat-circles" aria-label="Kateqoriyalar">
         <?php foreach (categories() as $c): ?>
-            <?php $photo = $categoryPhotos[(int)$c['id']] ?? ''; ?>
+            <?php $photo = $categoryPhotos[(int)$c['id']] ?? ($c['image'] ?? ''); ?>
             <a href="<?= url('shop.php?cat=' . urlencode($c['slug'])) ?>" class="cat-circle">
                 <span class="cat-circle-img">
                     <?php if ($photo): ?>
